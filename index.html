@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор стратегії організації</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky sidebar of 11 sections + one working section at a time; "дім стратегії" as the summary view */
+:root{
+  --bg:#f3f8f8; --surface:#ffffff; --surface-2:#eaf4f4; --ink:#13292c; --muted:#5b7376; --line:#d3e3e3;
+  --teal:#02b9b5; --teal-ink:#047a77; --orange:#f18602; --orange-soft:#fff1de;
+  --display:"Exo 2", "Segoe UI", system-ui, sans-serif;
+  --body:"Raleway", "Segoe UI", system-ui, sans-serif;
+  --radius:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1a1c; --surface:#142629; --surface-2:#1b3135; --ink:#e4f0f0; --muted:#93acae; --line:#284146;
+    --teal:#2fd0cc; --teal-ink:#5fe0dc; --orange:#ff9d2e; --orange-soft:#3a2a14; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1a1c; --surface:#142629; --surface-2:#1b3135; --ink:#e4f0f0; --muted:#93acae; --line:#284146;
+  --teal:#2fd0cc; --teal-ink:#5fe0dc; --orange:#ff9d2e; --orange-soft:#3a2a14; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+a{color:var(--teal-ink)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px;border-radius:6px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px max(16px,2vw)}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:1.05rem;cursor:default;user-select:none}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--teal);display:grid;place-items:center;color:#fff;font-weight:800}
+.brand small{display:block;font-family:var(--body);font-weight:500;font-size:.75rem;color:var(--muted)}
+.top .spacer{flex:1}
+.stratpick{display:flex;align-items:center;gap:8px}
+.stratpick select{max-width:260px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.status{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.status.ok i{background:var(--teal)} .status.local i{background:var(--orange)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--teal)}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.primary:hover{filter:brightness(.95)}
+.btn.ghost{background:transparent}
+.btn.warn{color:#c2410c}
+.btn.small{padding:5px 10px;font-size:.82rem}
+
+.shell{display:grid;grid-template-columns:290px 1fr;gap:24px;max-width:1280px;margin:0 auto;padding:20px max(16px,2vw) 60px}
+nav.side{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;display:flex;flex-direction:column;gap:4px}
+.overall{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:8px}
+.overall b{font-family:var(--display);font-size:1.6rem;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin-top:8px}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--orange));transition:width .3s}
+.navbtn{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:10px;cursor:pointer}
+.navbtn:hover{background:var(--surface-2)}
+.navbtn.on{background:var(--surface);box-shadow:inset 3px 0 0 var(--teal)}
+.navbtn .n{font-family:var(--display);font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.navbtn.on .n{color:var(--teal-ink)}
+.navbtn .t{font-weight:600;font-size:.92rem;line-height:1.3}
+.pct{font-size:.72rem;font-variant-numeric:tabular-nums;color:var(--muted);min-width:34px;text-align:right}
+.pct.full{color:var(--teal-ink);font-weight:700}
+
+main{min-width:0}
+.sechead{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+.eyebrow{font-family:var(--display);font-weight:600;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--orange)}
+.sechead h2{font-size:clamp(1.5rem,3vw,2.1rem)}
+.lead{color:var(--muted);max-width:68ch;margin:0}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+.form{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:.93rem}
+.field .help{font-size:.82rem;color:var(--muted);margin-top:-2px}
+.req{color:var(--orange);font-weight:700;margin-left:4px;font-size:.75rem;vertical-align:top}
+input[type=text],textarea,select.inp{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);resize:vertical}
+textarea{min-height:84px;line-height:1.5}
+input[type=text]:focus,textarea:focus,select.inp:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 25%,transparent)}
+::placeholder{color:color-mix(in srgb,var(--muted) 75%,transparent);font-style:italic}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.swot .field label{display:flex;align-items:center;gap:8px}
+.chip{display:inline-block;font-family:var(--display);font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--surface-2);color:var(--teal-ink)}
+.chip.o{background:var(--orange-soft);color:var(--orange)}
+.list{display:flex;flex-direction:column;gap:12px}
+.item{border:1px dashed var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--bg)}
+.itemhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.itemhead b{font-family:var(--display);font-size:.9rem;color:var(--teal-ink)}
+.listlabel{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.listlabel h3{font-size:1.05rem}
+
+aside.helper{display:flex;flex-direction:column;gap:12px;position:sticky;top:76px}
+details.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:0}
+details.box>summary{list-style:none;cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:700;display:flex;align-items:center;gap:10px}
+details.box>summary::-webkit-details-marker{display:none}
+details.box>summary::after{content:"+";margin-left:auto;color:var(--muted);font-size:1.1rem}
+details.box[open]>summary::after{content:"–"}
+details.box .in{padding:0 16px 14px;font-size:.9rem}
+details.box .in p{margin:.4em 0}
+details.box .in ul,details.box .in ol{margin:.3em 0;padding-left:1.2em}
+.ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:.8rem;font-weight:800;color:#fff;flex:none}
+.ico.h{background:var(--teal)} .ico.x{background:var(--orange)} .ico.c{background:#5b7376} .ico.l{background:#3b6f9c} .ico.ai{background:linear-gradient(135deg,var(--teal),var(--orange))}
+.checks label{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer}
+.checks input{margin-top:4px;accent-color:var(--teal)}
+.links a{display:block;padding:6px 0;border-bottom:1px solid var(--line);text-decoration:none}
+.links a:last-child{border-bottom:0}
+.links a span{display:block;font-size:.78rem;color:var(--muted)}
+.links a:hover strong{text-decoration:underline}
+.aiout{margin-top:10px;font-size:.88rem;background:var(--bg);border-radius:10px;padding:10px 12px;white-space:normal;max-height:420px;overflow:auto}
+.aiout:empty{display:none}
+.aiout ul{padding-left:1.1em;margin:.3em 0}
+
+.pager{display:flex;justify-content:space-between;gap:10px;margin-top:22px;flex-wrap:wrap}
+
+/* one-page house */
+.house{display:flex;flex-direction:column;gap:10px}
+.roof{background:var(--teal);color:#fff;border-radius:var(--radius) var(--radius) 6px 6px;padding:18px 22px;clip-path:polygon(0 18%,50% 0,100% 18%,100% 100%,0 100%);padding-top:44px;text-align:center}
+.roof h4{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;opacity:.85;font-family:var(--display)}
+.roof p{margin:.3em auto 0;font-family:var(--display);font-size:1.15rem;font-weight:600;max-width:60ch}
+.beam{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 18px;text-align:center}
+.beam h4,.pillar h4,.found h4{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--display)}
+.pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.pillar{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--orange);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.pillar strong{font-family:var(--display);font-size:1rem}
+.pillar ul{margin:0;padding-left:1.1em;font-size:.86rem}
+.pillar .kpi{font-size:.8rem;color:var(--muted)}
+.found{background:var(--surface-2);border-radius:6px 6px var(--radius) var(--radius);padding:12px 18px;text-align:center}
+.found .vals{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px}
+.found .vals span{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-weight:600;font-size:.88rem}
+.empty{color:var(--muted);font-style:italic}
+.exportgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.exportgrid .card{display:flex;flex-direction:column;gap:8px}
+.exportgrid .card p{margin:0;font-size:.86rem;color:var(--muted)}
+
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(5,20,22,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal.on{display:flex}
+.modal .card{max-width:440px;width:100%}
+.modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;max-width:90vw}
+.toast.on{opacity:1}
+.bird{position:fixed;right:14px;bottom:10px;width:22px;height:22px;opacity:.18;cursor:pointer;border:0;background:transparent;padding:0;z-index:5}
+.bird:hover{opacity:.9}
+.bird svg{width:100%;height:100%;fill:var(--teal)}
+
+@media (max-width:1060px){ .cols{grid-template-columns:1fr} aside.helper{position:static} }
+@media (max-width:820px){
+  .shell{grid-template-columns:1fr;gap:14px}
+  nav.side{position:static;max-height:none;flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .overall{display:none}
+  .navbtn{grid-template-columns:auto;white-space:nowrap;padding:8px 12px;background:var(--surface);border:1px solid var(--line)}
+  .navbtn .t,.navbtn .pct{display:none}
+  .navbtn.on{box-shadow:none;border-color:var(--teal);background:var(--teal)}
+  .navbtn.on .n{color:#fff}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .stratpick select{max-width:180px}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand" id="brand"><div class="mark">S</div><div>Стратегія організації<small>інтерактивний шаблон · learnlab.digital</small></div></div>
+  <div class="spacer"></div>
+  <div class="stratpick">
+    <label for="stratSel" class="status" style="color:var(--muted)">Документ</label>
+    <select id="stratSel" aria-label="Обрати стратегію"></select>
+    <button class="btn small" id="btnNew" type="button">+ Нова</button>
+    <button class="btn small ghost warn" id="btnDel" type="button" title="Видалити цю стратегію">Видалити</button>
+  </div>
+  <div class="status" id="status"><i></i><span>Завантаження…</span></div>
+</header>
+
+<div class="shell">
+  <nav class="side" id="nav" aria-label="Розділи стратегії"></nav>
+  <main id="main"></main>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="card">
+    <h3 id="modalTitle"></h3>
+    <p id="modalText" style="color:var(--muted);margin:.6em 0 0"></p>
+    <div class="row"><button class="btn" id="modalNo" type="button">Скасувати</button><button class="btn primary" id="modalYes" type="button">Так</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+<button class="bird" id="bird" type="button" aria-label="Пташка"><svg viewBox="0 0 24 24"><path d="M21 6c-1 .5-2 .7-3 .8a4.4 4.4 0 0 0-7.5 3v.8A11 11 0 0 1 3 7s-4 9 5 13a12 12 0 0 1-7 2c9 5 20 0 20-11.5 0-.3 0-.6-.1-.9C21.9 8.7 21.6 7.4 21 6z"/></svg></button>
+
+<script>
+"use strict";
+/* ============ SCHEMA ============ */
+const W = (u,t,d)=>({u,t,d});
+const SECTIONS = [
+{ id:"passport", title:"Паспорт стратегії", lead:"Базова інформація: про яку організацію документ, на який період і хто за нього відповідає.",
+  fields:[
+    {k:"org",type:"text",label:"Назва організації",req:1,ph:"ГО «Сусідство»"},
+    {group:2,fields:[
+      {k:"orgtype",type:"select",label:"Тип організації",opts:["Громадська організація","Благодійний фонд","Комунальна установа / підприємство","Орган місцевого самоврядування","Соціальне підприємство / бізнес","Мережа / спілка","Інше"]},
+      {k:"period",type:"text",label:"Період дії",req:1,ph:"2026–2029"}]},
+    {group:2,fields:[
+      {k:"owner",type:"text",label:"Власник стратегії",help:"Конкретна людина, яка відповідає за впровадження",ph:"Олена Коваль, виконавча директорка"},
+      {k:"approved",type:"text",label:"Ким і коли затверджено",ph:"Правління, протокол №4 від 12.12.2026"}]},
+    {k:"team",type:"area",label:"Робоча група",ph:"Хто писав і ухвалював рішення: імена, ролі"},
+    {k:"version",type:"text",label:"Версія документа",ph:"v1.0 — для обговорення з правлінням"}],
+  hint:`<p>Оптимальний горизонт для ГО та установ у нестабільному середовищі становить <b>3 роки</b> з щорічним переглядом. 5 років має сенс, коли є стабільне фінансування й інституційна історія.</p><p>Власником стратегії має бути людина, а не «команда». Інакше документ нікому не належить.</p>`,
+  exercise:{t:"Розмова «Навіщо нам цей документ?»",h:`<p>15 хв на старті з керівництвом. Кожен дописує речення:</p><ol><li>«Через 3 роки ця стратегія буде успішною, якщо…»</li><li>«Стратегію читатимуть насамперед…» (команда / донори / міська рада / партнери)</li><li>«Найбільше я боюся, що стратегія…»</li></ol><p>Від відповідей залежить формат: внутрішній робочий інструмент чи публічний документ для партнерів.</p>`},
+  checks:["Визначено власника стратегії (людину, не відділ)","Період узгоджено з бюджетним / грантовим циклом","Зрозуміло, хто головні читачі документа"],
+  links:[W("https://redcross.org.ua/wp-content/uploads/2026/07/Стратегія-ТЧХУ-2026-2030-рр.pdf","Стратегія ТЧХУ 2026–2030","Приклад з сильним оформленням і таймлайном"),W("https://ldn.org.ua/wp-content/uploads/2026/06/Stratehichna-ramka-2026-2029-.pdf","Стратегічна рамка «Мережі правового розвитку»","Лаконічний формат рамки"),W("https://mhpgromadi.org.ua/wp-content/uploads/2025/01/Stratehiia_Fondu_MHP_Hromadi_2025_2030-1.pdf","Стратплан БФ «МХП-Громаді» до 2030","Класична повна структура")]},
+
+{ id:"process", title:"Процес розробки", lead:"Як народжувалася стратегія. Цей розділ дає документу легітимність: читач бачить, що його не написали за одну ніч.",
+  fields:[
+    {k:"why",type:"area",label:"Чому оновлюємо стратегію саме зараз",req:1,ph:"Завершився попередній період; змінилося фінансування; зросла команда; війна змінила потреби громади…"},
+    {k:"steps",type:"area",label:"Етапи й методи",ph:"Березень: інтерв'ю з 12 стейкхолдерами. Квітень: дводенна стратсесія. Травень: обговорення з правлінням…"},
+    {k:"who",type:"area",label:"Хто був залучений",ph:"Команда (18 осіб), правління, 3 донори, представники міської ради, 40 мешканців через онлайн-опитування"},
+    {k:"evidence",type:"area",label:"На які дані спиралися",ph:"Звіти за 3 роки, опитування клієнтів, аналіз бюджету, дослідження громади"}],
+  hint:`<p>Опишіть процес коротко, на пів сторінки. Для донорів і партнерів важливо, <b>кого почули</b>. Для команди важливо, що її голос врахували.</p><p>Добре працює схема-таймлайн з 4–6 кроками.</p>`,
+  exercise:{t:"Карта залучення",h:`<p>Розкладіть стейкхолдерів у 4 кола:</p><ol><li><b>Вирішують</b>: хто затверджує</li><li><b>Співтворять</b>: хто в кімнаті на сесії</li><li><b>Консультують</b>: інтерв'ю, опитування</li><li><b>Інформовані</b>: кому покажемо результат</li></ol><p>Порожнє коло «Співтворять» означає ризик, що стратегію не приймуть.</p>`},
+  checks:["Почули тих, кому організація служить (клієнтів, мешканців)","Команда брала участь, а не лише керівництво","Є дані, а не лише думки"],
+  links:[W("https://www.undp.org/sites/g/files/zskgke326/files/migration/ua/UA-UNDP-participation-in-strategic-planning-web.pdf","ПРООН: Партисипація у стратегуванні","Посібник про залучення людей до стратегування"),W("https://www.undp.org/sites/g/files/zskgke326/files/migration/ua/Strategy-in-your-pocket_UKR.pdf","ПРООН: «Стратегія у вашій кишені»","Кишеньковий посібник українською"),W("https://home.ednannia.ua","ІСАР Єднання: організаційний розвиток","Сервіси, консультанти, навчання для ОГС")]},
+
+{ id:"context", title:"Аналіз середовища", lead:"Що відбувається навколо й усередині організації. Мета розділу не перелік фактів, а висновки «і що з цього для нас».",
+  fields:[
+    {sub:"PESTLE: зовнішнє середовище"},
+    {group:3,fields:[
+      {k:"p_pol",type:"area",label:"Політичні",ph:"Децентралізація, вибори, пріоритети міської ради…"},
+      {k:"p_eco",type:"area",label:"Економічні",ph:"Інфляція, скорочення донорського фінансування, гранти ЄС на відновлення…"},
+      {k:"p_soc",type:"area",label:"Соціальні",ph:"ВПО, ветерани, старіння населення, втома громадян…"},
+      {k:"p_tech",type:"area",label:"Технологічні",ph:"ШІ, цифрові послуги, Дія, кібербезпека…"},
+      {k:"p_leg",type:"area",label:"Правові",ph:"Зміни до законодавства про ГО, євроінтеграційні норми…"},
+      {k:"p_env",type:"area",label:"Екологічні",ph:"Зелене відновлення, енергоефективність, клімат…"}]},
+    {k:"trends",type:"area",label:"3–5 трендів, які найбільше вплинуть на нас",ph:"1. Перехід донорів від гуманітарних програм до програм відновлення…"},
+    {sub:"SWOT"},
+    {group:2,cls:"swot",fields:[
+      {k:"s",type:"area",label:"Сильні сторони",chip:"S · внутрішнє",ph:"Довіра мешканців; досвідчена команда фасилітаторів…"},
+      {k:"w",type:"area",label:"Слабкі сторони",chip:"W · внутрішнє",ph:"Залежність від 1 донора; немає системи моніторингу…"},
+      {k:"o",type:"area",label:"Можливості",chip:"O · зовнішнє",chipO:1,ph:"Програми відновлення громад; партнерство з університетами…"},
+      {k:"t",type:"area",label:"Загрози",chip:"T · зовнішнє",chipO:1,ph:"Відтік кадрів; зміна пріоритетів донорів…"}]},
+    {k:"conclusions",type:"area",label:"Ключові стратегічні висновки",req:1,help:"Те, що потім має перетворитися на напрями й цілі",ph:"1. Спираючись на довіру мешканців (S), можемо стати оператором програм відновлення (O)…"}],
+  hint:`<p>Розрізняйте: <b>S і W</b> стосуються вас (контролюєте), <b>O і T</b> стосуються середовища (не контролюєте). Типова помилка: записати «війну» в слабкі сторони.</p><p>Аналіз, який не перетворився на висновки, є просто довідкою. Обмежтеся 5–7 пунктами в кожному квадранті.</p>`,
+  exercise:{t:"TOWS: зшити SWOT у рішення",h:`<p>Після SWOT поставте 4 запитання:</p><ul><li><b>SO</b>: як сильні сторони допоможуть використати можливості?</li><li><b>WO</b>: які можливості допоможуть закрити слабкості?</li><li><b>ST</b>: як сильні сторони захистять від загроз?</li><li><b>WT</b>: чого уникати, щоб слабкість + загроза не стали кризою?</li></ul><p>Для трендів підійде «Колесо майбутнього»: тренд у центрі, наслідки 1-го і 2-го порядку довкола.</p>`},
+  checks:["Внутрішні й зовнішні фактори не переплутані","У кожному квадранті не більше 7 пунктів","Є 3–7 висновків, сформульованих як виклики чи можливості"],
+  links:[W("https://en.wikipedia.org/wiki/PEST_analysis","PEST / PESTLE-аналіз","Пояснення методу"),W("https://en.wikipedia.org/wiki/SWOT_analysis","SWOT-аналіз","Метод і обмеження, зокрема TOWS"),W("https://en.wikipedia.org/wiki/Futures_wheel","Колесо майбутнього (Futures wheel)","Форсайт-вправа для трендів")]},
+
+{ id:"stakeholders", title:"Стейкхолдери", lead:"Хто впливає на організацію і на кого впливає вона. Від цього залежать партнерства, комунікація й ризики.",
+  fields:[
+    {k:"sh",type:"list",label:"Зацікавлені сторони",item:"стейкхолдера",cols:[
+      {k:"name",type:"text",label:"Хто",ph:"Департамент економічного розвитку міськради"},
+      {k:"inf",type:"select",label:"Вплив на нас",opts:["","високий","середній","низький"]},
+      {k:"int",type:"select",label:"Зацікавленість",opts:["","висока","середня","низька"]},
+      {k:"exp",type:"area",label:"Чого очікують / що їм цінно",ph:"Прозорі дані про результати програм, швидкі пілоти"},
+      {k:"how",type:"area",label:"Як взаємодіємо",ph:"Щоквартальні зустрічі, спільна робоча група"}]},
+    {k:"sh_notes",type:"area",label:"Висновки з карти стейкхолдерів",ph:"Недостатньо працюємо з бізнесом; міськрада має високий вплив, але низьку залученість…"}],
+  hint:`<p>Матриця <b>вплив × зацікавленість</b>:</p><ul><li>високий вплив + висока зацікавленість: тісне партнерство;</li><li>високий вплив + низька зацікавленість: тримати задоволеними;</li><li>низький вплив + висока зацікавленість: інформувати;</li><li>низький + низька: моніторити.</li></ul>`,
+  exercise:{t:"Стілець стейкхолдера",h:`<p>Учасник сідає на «стілець» конкретного стейкхолдера й 2 хв говорить від його імені: «Від вас я хочу… Мене дратує… Я підтримаю вас, якщо…». Група записує інсайти. Повторіть для 3–4 ключових сторін.</p>`},
+  checks:["У переліку є ті, кому служимо (бенефіціари), а не лише донори","Для кожного ключового стейкхолдера визначено спосіб взаємодії"],
+  links:[W("https://en.wikipedia.org/wiki/Stakeholder_analysis","Аналіз стейкхолдерів","Матриця влади й інтересу"),W("https://bobcat-burgundy-ktya.squarespace.com/nonprofit-strategy-articles/real-examples-of-good-nonprofit-strategic-plans","Real Examples of Good Nonprofit Strategic Plans","Розбір прикладів (англ.)")]},
+
+{ id:"identity", title:"Місія, візія, цінності", lead:"Ядро ідентичності. Ці формулювання переживуть кілька стратегічних циклів, тому сформулюйте їх точно.",
+  fields:[
+    {k:"mission",type:"area",label:"Місія: для чого ми існуємо",req:1,help:"Формула: ми [що робимо] для [кого], щоб [яка зміна]",ph:"Ми створюємо простори й інструменти для мешканців, щоб вони спільно змінювали свої квартали"},
+    {k:"vision",type:"area",label:"Візія: який стан ми хочемо бачити",req:1,help:"Конкретний образ майбутнього, а не повтор місії",ph:"У 2029 році в кожному районі міста діє активна спільнота сусідів, з якою місто планує зміни"},
+    {k:"values",type:"list",label:"Цінності",item:"цінність",cols:[
+      {k:"name",type:"text",label:"Цінність",ph:"Відкритість"},
+      {k:"do",type:"area",label:"Як це виглядає в діях",ph:"Публікуємо звіти щокварталу; рішення пояснюємо команді до впровадження"},
+      {k:"dont",type:"area",label:"Чого ми не робимо",ph:"Не ухвалюємо кадрових рішень «за зачиненими дверима»"}]}],
+  hint:`<p><b>Тест місії:</b> чи можна пояснити її за 30 секунд у ліфті? Чи відрізняє вона вас від сусідньої організації?</p><p><b>Тест візії:</b> чи можна її намалювати? Якщо ні, вона занадто абстрактна.</p><p><b>Тест цінностей:</b> 3–5 цінностей, кожна з поведінковими проявами. Цінність без поведінки залишається гаслом на стіні.</p>`,
+  exercise:{t:"Обкладинка журналу 2029",h:`<p>Групи по 4–5 людей створюють обкладинку журналу, який пише про організацію через 3 роки: заголовок, фото (намальоване), 3 цитати, цифра року. Порівняйте обкладинки й знайдіть спільне: це зерно візії.</p><p>Для цінностей: «Цінності в дії». Кожна цінність отримує 2 картки: <i>«Ми робимо…»</i> і <i>«Ми не робимо…»</i>, з прикладами з минулого року.</p>`},
+  checks:["Місія відповідає на «що, для кого, навіщо»","Візія не дублює місію і має образ","Кожна цінність має спостережувані прояви","Цінностей не більше 5"],
+  links:[W("https://en.wikipedia.org/wiki/Mission_statement","Місія організації","Що це і чим відрізняється від візії"),W("https://en.wikipedia.org/wiki/Vision_statement","Візія","Формулювання бажаного майбутнього"),W("https://brenebrown.com/resources/dare-to-lead-list-of-values/","Перелік цінностей (Brené Brown)","Словник цінностей для вправ")]},
+
+{ id:"toc", title:"Теорія змін", lead:"Логіка того, як ваша робота веде до бажаної зміни. Розділ потрібен донорам і корисний для чесної розмови в команді.",
+  fields:[
+    {k:"problem",type:"area",label:"Проблема, яку розв'язуємо",req:1,ph:"Мешканці не впливають на рішення щодо простору, де вони живуть"},
+    {k:"causes",type:"area",label:"Глибинні причини",ph:"Низька довіра до влади; немає механізмів участі; бракує навичок самоорганізації"},
+    {k:"change",type:"area",label:"Довгострокова зміна (імпакт)",req:1,ph:"Місто розвивається разом із мешканцями"},
+    {k:"outcomes",type:"area",label:"Проміжні результати / передумови",ph:"1. Діють ініціативні групи в 10 районах. 2. Місто має регламент партисипації. 3. …"},
+    {k:"assumptions",type:"area",label:"Припущення",help:"Що має бути правдою, щоб логіка працювала",ph:"Міська рада зацікавлена в діалозі; мешканці мають час і ресурс…"},
+    {k:"contribution",type:"area",label:"Наш внесок і внесок інших",ph:"Ми відповідаємо за навчання й фасилітацію; міськрада за рішення; бізнес за співфінансування"}],
+  hint:`<p>Теорія змін читається знизу вгору: <b>якщо</b> ми робимо X, <b>то</b> відбувається Y, <b>тому що</b> Z.</p><p>Найцінніша частина — <b>припущення</b>. Саме їх варто перевіряти в моніторингу.</p>`,
+  exercise:{t:"«5 чому» + ланцюжок «якщо-то»",h:`<ol><li>Запишіть проблему. 5 разів запитайте «чому?», щоб дійти до глибинних причин.</li><li>На стікерах розкладіть шлях від діяльності до імпакту справа наліво.</li><li>Між кожною парою стікерів запитайте: «Що має бути правдою, щоб цей перехід стався?» Відповіді й будуть припущеннями.</li></ol>`},
+  checks:["Проблема сформульована як стан, а не як брак наших послуг","Є щонайменше 3 явні припущення","Зрозуміло, що робимо ми, а що інші"],
+  links:[W("https://www.theoryofchange.org/what-is-theory-of-change/","Center for Theory of Change","Що таке теорія змін (англ.)"),W("https://en.wikipedia.org/wiki/Theory_of_change","Теорія змін","Огляд підходу"),W("https://en.wikipedia.org/wiki/Logical_framework_approach","Логічна рамка (Logframe)","Пов'язаний донорський інструмент")]},
+
+{ id:"goals", title:"Напрями та цілі", lead:"Серце стратегії: 3–5 напрямів, у кожному стратегічна ціль, операційні цілі й показники.",
+  fields:[
+    {k:"dirs",type:"list",label:"Стратегічні напрями",item:"напрям",cols:[
+      {k:"name",type:"text",label:"Назва напряму",ph:"Сильні спільноти районів"},
+      {k:"goal",type:"area",label:"Стратегічна ціль (до кінця періоду)",ph:"До 2029 року в 10 районах діють ініціативні групи, які реалізували щонайменше по 2 зміни"},
+      {k:"obj",type:"area",label:"Операційні цілі",help:"По одній на рядок",ph:"Навчити 150 лідерів спільнот\nЗапустити фонд мікрогрантів\nСтворити онлайн-платформу ініціатив"},
+      {k:"kpi",type:"area",label:"Показники",help:"Формат: показник — база — ціль — рік",ph:"Кількість активних ініціативних груп — 3 — 10 — 2029\nРеалізовані зміни — 2 — 20 — 2029"},
+      {k:"own",type:"text",label:"Відповідальний",ph:"Керівниця програм"},
+      {k:"res",type:"text",label:"Орієнтовні ресурси",ph:"2 FTE, ~1,2 млн грн/рік"}]},
+    {k:"stop",type:"area",label:"Від чого відмовляємось",help:"Стратегія — це ще й вибір, чого не робити",ph:"Більше не проводимо разові заходи без продовження; не беремо гранти поза трьома напрямами"}],
+  hint:`<p><b>3–5 напрямів максимум.</b> Більше означає відсутність пріоритетів.</p><p>Цілі формулюйте за <b>SMART</b>: конкретні, вимірні, досяжні, релевантні, обмежені в часі. Альтернатива: <b>OKR</b> (якісна ціль + 3–4 вимірні ключові результати).</p><p>Кожен показник потребує <b>базового значення</b>. Без нього не видно, чи є прогрес.</p>`,
+  exercise:{t:"Матриця «вплив × зусилля» + «Стоп-лист»",h:`<ol><li>Випишіть усі ідеї цілей на стікери.</li><li>Розкладіть на матриці: вертикаль — вплив на місію, горизонталь — зусилля.</li><li>Пріоритет мають «високий вплив / помірні зусилля».</li><li>Завершіть питанням: <i>«Щоб це зробити, що ми перестаємо робити?»</i></li></ol>`},
+  checks:["Не більше 5 напрямів","Кожен напрям випливає з висновків аналізу або теорії змін","Кожна ціль має показник із базою і ціллю","Є «стоп-лист»","За кожен напрям відповідає конкретна людина"],
+  links:[W("https://en.wikipedia.org/wiki/SMART_criteria","SMART-критерії","Як формулювати цілі"),W("https://en.wikipedia.org/wiki/Objectives_and_key_results","OKR","Цілі та ключові результати"),W("https://en.wikipedia.org/wiki/Balanced_scorecard","Збалансована система показників","Чотири перспективи вимірювання")]},
+
+{ id:"capacity", title:"Спроможність і ресурси", lead:"Що організація має змінити всередині, щоб утримати стратегію: люди, гроші, партнерства, процеси.",
+  fields:[
+    {k:"people",type:"area",label:"Люди й компетенції",ph:"Потрібні: аналітик даних, координатор волонтерів. Розвиток: фасилітація для всієї команди"},
+    {k:"finance",type:"area",label:"Фінансова модель і джерела",ph:"Зараз 80% від одного донора. Ціль 2029: не більше 40% від одного джерела; 15% власних доходів"},
+    {k:"partners",type:"area",label:"Партнерства",ph:"Університет — дослідження; IT-компанія — платформа; міськрада — співфінансування"},
+    {k:"systems",type:"area",label:"Процеси, цифрові інструменти, дані",ph:"Єдина CRM, регламенти ключових процесів, дашборд показників"},
+    {k:"comms",type:"area",label:"Комунікації й бренд",ph:"Кому і про що говоримо; ключові канали"},
+    {k:"gaps",type:"area",label:"Ключові прогалини, які закриваємо в першу чергу",req:1,ph:"1. Немає моніторингу результатів. 2. Вигорання команди…"}],
+  hint:`<p>Типова пастка: амбітні зовнішні цілі без змін усередині. Перевірте кожен напрям питанням: <b>«Хто це робитиме і за які гроші?»</b></p>`,
+  exercise:{t:"Stop / Start / Continue",h:`<p>Для кожної сфери (люди, гроші, процеси, партнерства) команда заповнює три колонки: що <b>припиняємо</b>, що <b>починаємо</b>, що <b>продовжуємо</b>. Голосування крапками визначає 3 пріоритети.</p>`},
+  checks:["Для кожного напряму зрозуміло, хто й за які кошти його реалізує","Є план диверсифікації фінансування","Враховано навантаження й добробут команди"],
+  links:[W("https://home.ednannia.ua","ІСАР Єднання: оргрозвиток","Інструменти оцінки спроможності ОГС"),W("https://en.wikipedia.org/wiki/Capacity_building","Розвиток спроможності","Огляд поняття")]},
+
+{ id:"risks", title:"Ризики", lead:"Що може завадити й що ви робите заздалегідь.",
+  fields:[
+    {k:"risks",type:"list",label:"Реєстр ризиків",item:"ризик",cols:[
+      {k:"r",type:"text",label:"Ризик",ph:"Скорочення фінансування від ключового донора"},
+      {k:"p",type:"select",label:"Ймовірність",opts:["","низька","середня","висока"]},
+      {k:"i",type:"select",label:"Вплив",opts:["","низький","середній","високий"]},
+      {k:"m",type:"area",label:"Що робимо (запобігання / реагування)",ph:"Резервний фонд на 3 міс.; 2 нові заявки на квартал"},
+      {k:"o",type:"text",label:"Хто стежить",ph:"Фінансова директорка"}]}],
+  hint:`<p>Достатньо 5–8 ризиків. Для кожного <b>високого × високого</b> потрібна конкретна дія вже зараз, а не «будемо моніторити».</p><p>Не забудьте про внутрішні ризики: вигорання, відхід ключових людей, конфлікт цінностей.</p>`,
+  exercise:{t:"Пре-мортем",h:`<p>«Уявіть, що настав кінець періоду і стратегія провалилася. Напишіть історію: що пішло не так?» 10 хв індивідуально, потім збір і кластеризація. Кожен кластер стає ризиком.</p>`},
+  checks:["Є внутрішні й зовнішні ризики","Для кожного критичного ризику є конкретна дія","За кожен ризик відповідає людина"],
+  links:[W("https://en.wikipedia.org/wiki/Risk_matrix","Матриця ризиків","Ймовірність × вплив"),W("https://en.wikipedia.org/wiki/Pre-mortem","Пре-мортем","Метод Гері Кляйна")]},
+
+{ id:"impl", title:"Впровадження і моніторинг", lead:"Як стратегія житиме після затвердження: план першого року, ритм перегляду, вимірювання.",
+  fields:[
+    {k:"plan",type:"list",label:"План дій на перший рік",item:"дію",cols:[
+      {k:"a",type:"text",label:"Дія",ph:"Запустити програму навчання лідерів"},
+      {k:"q",type:"select",label:"Коли",opts:["","I квартал","II квартал","III квартал","IV квартал","Весь рік"]},
+      {k:"o",type:"text",label:"Відповідальний",ph:"Менеджерка програм"},
+      {k:"r",type:"text",label:"Очікуваний результат",ph:"30 випускників"}]},
+    {k:"rhythm",type:"area",label:"Ритм управління стратегією",req:1,ph:"Щомісяця: чек-ін команди 30 хв. Щокварталу: огляд показників з правлінням. Щороку: стратсесія й оновлення плану"},
+    {k:"monitor",type:"area",label:"Як збираємо дані",ph:"Дашборд у Google Таблицях; опитування учасників після програм; річне дослідження"},
+    {k:"review",type:"area",label:"Коли переглядаємо стратегію позапланово",ph:"Зміна >30% бюджету; зміна керівника; суттєві зміни безпекової ситуації"},
+    {k:"share",type:"area",label:"Як стратегію побачать команда й партнери",ph:"Презентація на загальних зборах; одна сторінка на стіні офісу; публічна версія на сайті"}],
+  hint:`<p>Стратегія без <b>ритму</b> перегляду застаріває за пів року. Призначте дати в календарі ще до затвердження документа.</p><p>Робочий формат: квартальний огляд «світлофором»: зелений (у плані), жовтий (ризик), червоний (потрібне рішення).</p>`,
+  exercise:{t:"Календар стратегії",h:`<p>Відкрийте календар на рік вперед і разом поставте: 4 квартальні огляди, річну сесію, дати звітів правлінню. Хто відповідає за підготовку кожного огляду?</p>`},
+  checks:["Є план першого року з відповідальними","Дати оглядів уже в календарі","Визначено, звідки беремо дані для кожного показника","Є версія стратегії для зовнішніх партнерів"],
+  links:[W("https://en.wikipedia.org/wiki/Monitoring_and_evaluation","Моніторинг і оцінка","Основи M&E"),W("https://thevantagepoint.ca/project/one-page-strategic-plan/","One-Page Strategic Plan","Зразок стратегії на одну сторінку"),W("https://smartsheet.com/content/non-profit-strategic-plan-template","Smartsheet: шаблони й 12 PDF-прикладів","Для натхнення (англ.)")]},
+
+{ id:"onepage", title:"Стратегія на 1 сторінку", lead:"Зведення, яке збирається автоматично з ваших відповідей. Його можна показати команді, вивісити на стіну або вставити на першу сторінку документа.", summary:true}
+];
+
+/* ============ HELPERS ============ */
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nl = s=>esc(s).replace(/\n/g,"<br>");
+const uid8 = ()=>Math.random().toString(36).slice(2,10);
+function leafFields(sec){const out=[];(sec.fields||[]).forEach(f=>{if(f.group)out.push(...f.fields);else if(f.k)out.push(f)});return out}
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("on"),2600)}
+function ask(title,text){return new Promise(res=>{$("#modalTitle").textContent=title;$("#modalText").textContent=text;const m=$("#modal");m.classList.add("on");$("#modalYes").focus();
+  const done=v=>{m.classList.remove("on");$("#modalYes").onclick=$("#modalNo").onclick=null;res(v)};$("#modalYes").onclick=()=>done(true);$("#modalNo").onclick=()=>done(false)})}
+
+/* ============ STATE & STORAGE ============ */
+const LS="learnlab_strategy_v1";
+let store={}, curId=null, secIdx=0;
+let db=null, userId=null, sample=null, downloads=null, cloud=false;
+function lsLoad(){try{const r=JSON.parse(localStorage.getItem(LS)||"{}");return r&&typeof r==="object"?r:{}}catch(e){return{}}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify({store,curId}))}catch(e){}}
+function cur(){return store[curId]}
+function D(){return cur().data}
+function newStrategy(data){const id=uid8();store[id]={id,updatedAt:Date.now(),data:data||{}};curId=id;return id}
+function titleOf(s){return (s.data.org||"Без назви")+(s.data.period?" · "+s.data.period:"")}
+
+function setStatus(kind,text){const s=$("#status");s.className="status "+kind;s.querySelector("span").textContent=text}
+
+let saveTimer=null; const writing={}, pending={};
+function touch(){cur().updatedAt=Date.now();lsSave();setStatus("", "Зберігаю…");clearTimeout(saveTimer);saveTimer=setTimeout(()=>pushRemote(curId),900);refreshNav()}
+async function pushRemote(id){
+  const s=store[id]; if(!s)return;
+  if(!cloud){setStatus("local","Збережено в цьому браузері");return}
+  if(writing[id]){pending[id]=true;return}
+  writing[id]=true;
+  try{await db.collection("data/users/"+userId).doc("s_"+id).set({updatedAt:s.updatedAt,title:titleOf(s),json:JSON.stringify(s.data)});setStatus("ok","Збережено у хмарі")}
+  catch(e){setStatus("local", e&&e.code==="quota_exceeded"?"Хмара переповнена, збережено в браузері":"Збережено в браузері");}
+  writing[id]=false; if(pending[id]){pending[id]=false;pushRemote(id)}
+}
+async function removeRemote(id){if(!cloud)return;try{await db.collection("data/users/"+userId).doc("s_"+id).delete()}catch(e){}}
+
+async function initCloud(){
+  const use=n=>{try{return (window.claude&&window.claude.use)?window.claude.use(n):Promise.resolve(null)}catch(e){return Promise.resolve(null)}};
+  const [dbN,userN,sampN,dlN]=await Promise.all([use("db"),use("user"),use("sample"),use("downloads")]);
+  sample=sampN; downloads=dlN;
+  document.querySelectorAll("[data-need=sample]").forEach(el=>el.hidden=!sample);
+  document.querySelectorAll("[data-need=dl]").forEach(el=>el.hidden=!downloads);
+  if(dbN&&userN){try{userId=await userN.id()}catch(e){userId=null}}
+  if(!dbN||!userId){setStatus("local","Зберігається в цьому браузері");return}
+  db=dbN;
+  const timeout=new Promise(r=>setTimeout(()=>r("timeout"),10000));
+  try{
+    const snap=await Promise.race([db.collection("data/users/"+userId).get(),timeout]);
+    if(snap==="timeout"){setStatus("local","Хмара не відповідає, зберігаю в браузері");return}
+    cloud=true;
+    const remoteIds=new Set();
+    snap.docs.forEach(d=>{if(!d.exists||!d.id.startsWith("s_"))return;const b=d.data();const id=d.id.slice(2);remoteIds.add(id);
+      let data={};try{data=JSON.parse(b.json||"{}")}catch(e){}
+      if(!store[id]||(b.updatedAt||0)>(store[id].updatedAt||0))store[id]={id,updatedAt:b.updatedAt||0,data}});
+    for(const id of Object.keys(store)){if(!remoteIds.has(id)&&Object.keys(store[id].data).length)await pushRemote(id)}
+    if(!store[curId])curId=Object.keys(store)[0];
+    lsSave();renderAll();setStatus("ok","Збережено у хмарі");
+  }catch(e){setStatus("local","Зберігається в цьому браузері")}
+}
+
+/* ============ PROGRESS ============ */
+function filled(v){if(Array.isArray(v))return v.some(it=>Object.values(it).some(x=>String(x||"").trim()));return String(v||"").trim().length>0}
+function secProgress(sec){const fs=leafFields(sec);if(!fs.length)return null;const n=fs.filter(f=>filled(D()[f.k])).length;return n/fs.length}
+function overall(){const ps=SECTIONS.map(secProgress).filter(p=>p!==null);return ps.reduce((a,b)=>a+b,0)/ps.length}
+
+/* ============ RENDER ============ */
+function renderPicker(){
+  const sel=$("#stratSel");const ids=Object.keys(store).sort((a,b)=>store[b].updatedAt-store[a].updatedAt);
+  sel.innerHTML=ids.map(id=>`<option value="${id}"${id===curId?" selected":""}>${esc(titleOf(store[id]))}</option>`).join("")+`<option value="__demo">Відкрити демо-приклад…</option><option value="__import">Імпортувати з файлу .json…</option>`;
+}
+function refreshNav(){
+  const ov=overall();
+  $("#nav").innerHTML=`<div class="overall"><div style="font-size:.82rem;color:var(--muted)">Заповнено загалом</div><b>${Math.round(ov*100)}%</b><div class="bar"><span style="width:${Math.round(ov*100)}%"></span></div></div>`+
+  SECTIONS.map((s,i)=>{const p=secProgress(s);const pc=p===null?"":`<span class="pct${p===1?" full":""}">${p===1?"✓":Math.round(p*100)+"%"}</span>`;
+    return `<button class="navbtn${i===secIdx?" on":""}" data-go="${i}" type="button"><span class="n">${String(i+1).padStart(2,"0")}</span><span class="t">${esc(s.title)}</span>${pc}</button>`}).join("");
+  const sel=$("#stratSel");const o=sel.querySelector(`option[value="${curId}"]`);if(o)o.textContent=titleOf(cur());
+}
+function fieldHTML(f,val,attrs){
+  const id="f_"+attrs.replace(/[^a-z0-9]+/gi,"_");
+  const lab=`<label for="${id}">${esc(f.label)}${f.req?'<span class="req" title="Рекомендовано заповнити">●</span>':""}${f.chip?` <span class="chip${f.chipO?" o":""}">${esc(f.chip)}</span>`:""}</label>`;
+  const help=f.help?`<div class="help">${esc(f.help)}</div>`:"";
+  let ctl;
+  if(f.type==="area")ctl=`<textarea id="${id}" ${attrs.startsWith("k=")?"":""}data-path="${attrs}" placeholder="${esc(f.ph||"")}" rows="${f.rows||3}">${esc(val||"")}</textarea>`;
+  else if(f.type==="select")ctl=`<select class="inp" id="${id}" data-path="${attrs}">${f.opts.map(o=>`<option${o===(val||"")?" selected":""} value="${esc(o)}">${o?esc(o):"— оберіть —"}</option>`).join("")}</select>`;
+  else ctl=`<input type="text" id="${id}" data-path="${attrs}" value="${esc(val||"")}" placeholder="${esc(f.ph||"")}">`;
+  return `<div class="field">${lab}${help}${ctl}</div>`;
+}
+function listHTML(f){
+  const arr=D()[f.k]||[];
+  const items=arr.map((it,i)=>`<div class="item"><div class="itemhead"><b>${esc(f.label.split(" ")[0])} ${i+1}</b><button class="btn small ghost warn" type="button" data-del="${f.k}" data-i="${i}">Прибрати</button></div>
+    ${f.cols.map(c=>fieldHTML(c,it[c.k],`${f.k}.${i}.${c.k}`)).join("")}</div>`).join("");
+  return `<div class="card"><div class="listlabel"><h3>${esc(f.label)}</h3><span style="font-size:.82rem;color:var(--muted)">${arr.length} шт.</span></div>
+  <div class="list" style="margin-top:12px">${items||`<p class="empty" style="margin:0">Ще порожньо. Додайте перший запис.</p>`}</div>
+  <div style="margin-top:12px"><button class="btn" type="button" data-add="${f.k}">+ Додати ${esc(f.item)}</button></div></div>`;
+}
+function helperHTML(sec,i){
+  const checks=D()._checks||{};
+  return `<aside class="helper">
+  <details class="box" open><summary><span class="ico h">?</span>Підказки</summary><div class="in">${sec.hint}</div></details>
+  <details class="box"><summary><span class="ico x">◆</span>Пропрацювати з командою</summary><div class="in"><p><b>${esc(sec.exercise.t)}</b></p>${sec.exercise.h}</div></details>
+  <details class="box" open><summary><span class="ico c">✓</span>Самоперевірка</summary><div class="in checks">${sec.checks.map((c,j)=>{const key=sec.id+"_"+j;return `<label><input type="checkbox" data-check="${key}"${checks[key]?" checked":""}><span>${esc(c)}</span></label>`}).join("")}</div></details>
+  <details class="box" data-need="sample" ${sample?"":"hidden"}><summary><span class="ico ai">AI</span>Порадитися з ШІ</summary><div class="in"><p style="color:var(--muted)">ШІ прочитає заповнене в цьому розділі й дасть зворотний зв'язок: що сильно, що розмито, які питання поставити команді.</p>
+    <button class="btn primary small" type="button" data-ai="${i}">Отримати зворотний зв'язок</button><div class="aiout" id="aiout"></div></div></details>
+  <details class="box"><summary><span class="ico l">↗</span>Корисні посилання</summary><div class="in links">${sec.links.map(l=>`<a href="${esc(l.u)}" target="_blank" rel="noopener"><strong>${esc(l.t)}</strong><span>${esc(l.d)}</span></a>`).join("")}</div></details>
+  </aside>`;
+}
+function renderSection(){
+  const sec=SECTIONS[secIdx];
+  let body;
+  if(sec.summary)body=summaryHTML();
+  else{
+    const parts=[];
+    sec.fields.forEach(f=>{
+      if(f.sub){parts.push(`<h3 style="font-size:1.05rem;margin-top:4px">${esc(f.sub)}</h3>`);return}
+      if(f.group){parts.push(`<div class="card ${f.cls||""}"><div class="grid${f.group}">${f.fields.map(g=>fieldHTML(g,D()[g.k],g.k)).join("")}</div></div>`);return}
+      if(f.type==="list"){parts.push(listHTML(f));return}
+      parts.push(`<div class="card">${fieldHTML(f,D()[f.k],f.k)}</div>`);
+    });
+    body=`<div class="cols"><div class="form">${parts.join("")}</div>${helperHTML(sec,secIdx)}</div>`;
+  }
+  const prev=secIdx>0?`<button class="btn" type="button" data-go="${secIdx-1}">← ${esc(SECTIONS[secIdx-1].title)}</button>`:"<span></span>";
+  const next=secIdx<SECTIONS.length-1?`<button class="btn primary" type="button" data-go="${secIdx+1}">${esc(SECTIONS[secIdx+1].title)} →</button>`:"";
+  $("#main").innerHTML=`<div class="sechead"><span class="eyebrow">Розділ ${secIdx+1} з ${SECTIONS.length}</span><h2>${esc(sec.title)}</h2><p class="lead">${esc(sec.lead)}</p></div>${body}<div class="pager">${prev}${next}</div>`;
+  autoGrowAll();
+}
+function renderAll(){renderPicker();refreshNav();renderSection()}
+
+/* ============ SUMMARY ============ */
+function lines(s){return String(s||"").split("\n").map(x=>x.replace(/^\s*[-•\d.)]+\s*/,"").trim()).filter(Boolean)}
+function summaryHTML(){
+  const d=D(); const dirs=(d.dirs||[]).filter(x=>x.name||x.goal); const vals=(d.values||[]).filter(v=>v.name);
+  const pill=dirs.length?dirs.map(x=>`<div class="pillar"><strong>${esc(x.name||"Напрям")}</strong>${x.goal?`<div style="font-size:.88rem">${nl(x.goal)}</div>`:""}${lines(x.obj).length?`<ul>${lines(x.obj).map(o=>`<li>${esc(o)}</li>`).join("")}</ul>`:""}${lines(x.kpi).length?`<div class="kpi">${lines(x.kpi).map(esc).join("<br>")}</div>`:""}${x.own?`<div class="kpi">Відповідає: ${esc(x.own)}</div>`:""}</div>`).join(""):`<div class="pillar"><span class="empty">Додайте напрями в розділі «Напрями та цілі»</span></div>`;
+  const house=`<div class="house" id="house">
+    <div class="roof"><h4>Візія${d.period?" · "+esc(d.period):""}</h4><p>${d.vision?nl(d.vision):'<span style="opacity:.8">Візія ще не сформульована</span>'}</p></div>
+    <div class="beam"><h4>Місія</h4><div>${d.mission?nl(d.mission):'<span class="empty">Місія ще не сформульована</span>'}</div></div>
+    <div class="pillars">${pill}</div>
+    ${d.stop?`<div class="beam" style="border-style:dashed"><h4>Від чого відмовляємось</h4><div style="font-size:.9rem">${nl(d.stop)}</div></div>`:""}
+    <div class="found"><h4>Цінності</h4><div class="vals">${vals.length?vals.map(v=>`<span>${esc(v.name)}</span>`).join(""):'<span class="empty" style="border:0;background:none">Додайте цінності</span>'}</div></div>
+  </div>`;
+  const dl=downloads?"":"hidden";
+  return `<div class="form">
+    <div class="card"><h3 style="margin-bottom:12px">${esc(d.org||"Назва організації")}</h3>${house}</div>
+    <h3 style="font-size:1.1rem;margin-top:8px">Експорт і передача</h3>
+    <div class="exportgrid">
+      <div class="card"><b>Повний документ (.html)</b><p>Оформлений документ з усіма розділами. Відкрийте в браузері й збережіть як PDF або відкрийте у Word.</p><button class="btn primary small" type="button" data-exp="html" data-need="dl" ${dl}>Завантажити</button></div>
+      <div class="card"><b>Одна сторінка (.html)</b><p>«Дім стратегії» для друку на A4 або вставки в презентацію.</p><button class="btn small" type="button" data-exp="one" data-need="dl" ${dl}>Завантажити</button></div>
+      <div class="card"><b>Текст Markdown</b><p>Для Google Docs, Notion або листа.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" type="button" data-exp="copy">Копіювати</button><button class="btn small" type="button" data-exp="md" data-need="dl" ${dl}>Завантажити .md</button></div></div>
+      <div class="card"><b>Резервна копія (.json)</b><p>Щоб передати чернетку колезі чи клієнту: вони імпортують файл у цей шаблон.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" type="button" data-exp="json" data-need="dl" ${dl}>Експорт</button><button class="btn small" type="button" data-exp="import">Імпорт</button></div></div>
+    </div></div>`;
+}
+
+/* ============ EXPORT BUILDERS ============ */
+function mdBuild(){
+  const d=D(); const o=[`# Стратегія розвитку ${d.org||""}${d.period?" на "+d.period:""}`.trim()];
+  SECTIONS.forEach((s,i)=>{if(s.summary)return;const blk=[];
+    s.fields.forEach(f=>{const fs=f.group?f.fields:[f];fs.forEach(g=>{if(!g.k)return;const v=d[g.k];
+      if(g.type==="list"){const arr=(v||[]).filter(it=>Object.values(it).some(x=>String(x||"").trim()));if(!arr.length)return;blk.push(`### ${g.label}`);
+        arr.forEach((it,j)=>{const head=it[g.cols[0].k]||`${j+1}`;blk.push(`**${j+1}. ${head}**`);g.cols.slice(1).forEach(c=>{if(String(it[c.k]||"").trim())blk.push(`- *${c.label}:* ${String(it[c.k]).replace(/\n/g,"; ")}`)});blk.push("")})}
+      else if(filled(v))blk.push(`**${g.label}**\n\n${v}\n`)})});
+    if(blk.length)o.push(`\n## ${i+1}. ${s.title}\n`,...blk)});
+  return o.join("\n");
+}
+const docCSS=`body{font-family:Raleway,Segoe UI,Arial,sans-serif;color:#13292c;max-width:820px;margin:40px auto;padding:0 24px;line-height:1.55}h1,h2,h3{font-family:'Exo 2',Segoe UI,Arial,sans-serif}h1{color:#047a77;border-bottom:4px solid #f18602;padding-bottom:8px}h2{color:#047a77;margin-top:2em;border-bottom:1px solid #d3e3e3;padding-bottom:4px}h3{margin-top:1.4em}.lbl{font-weight:700;margin-top:1em}.v{white-space:pre-wrap}table{border-collapse:collapse;width:100%;font-size:.92em;margin:.6em 0}td,th{border:1px solid #d3e3e3;padding:6px 8px;vertical-align:top;text-align:left}th{background:#eaf4f4}.meta{color:#5b7376}@media print{body{margin:0}h2{page-break-after:avoid}}`;
+function htmlBuild(){
+  const d=D(); const out=[`<h1>Стратегія розвитку ${esc(d.org||"")}${d.period?" на "+esc(d.period):""}</h1>`];
+  const meta=[d.orgtype,d.owner&&"Власник: "+d.owner,d.approved&&"Затверджено: "+d.approved,d.version].filter(Boolean);
+  if(meta.length)out.push(`<p class="meta">${meta.map(esc).join(" · ")}</p>`);
+  SECTIONS.forEach((s,i)=>{if(s.summary||s.id==="passport")return;const blk=[];
+    s.fields.forEach(f=>{const fs=f.group?f.fields:[f];fs.forEach(g=>{if(!g.k)return;const v=d[g.k];
+      if(g.type==="list"){const arr=(v||[]).filter(it=>Object.values(it).some(x=>String(x||"").trim()));if(!arr.length)return;
+        blk.push(`<h3>${esc(g.label)}</h3><table><tr>${g.cols.map(c=>`<th>${esc(c.label)}</th>`).join("")}</tr>${arr.map(it=>`<tr>${g.cols.map(c=>`<td>${nl(it[c.k])}</td>`).join("")}</tr>`).join("")}</table>`)}
+      else if(filled(v))blk.push(`<div class="lbl">${esc(g.label)}</div><div class="v">${esc(v)}</div>`)})});
+    if(blk.length)out.push(`<h2>${i}. ${esc(s.title)}</h2>`,...blk)});
+  return `<!DOCTYPE html><html lang="uk"><head><meta charset="utf-8"><title>Стратегія ${esc(d.org||"")}</title><link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700&family=Raleway:wght@400;700&display=swap" rel="stylesheet"><style>${docCSS}</style></head><body>${out.join("\n")}</body></html>`;
+}
+function oneBuild(){
+  const house=document.querySelector("#house");const h=house?house.outerHTML:"";
+  const css=`:root{--surface:#fff;--surface-2:#eaf4f4;--line:#d3e3e3;--muted:#5b7376;--teal:#02b9b5;--orange:#f18602;--radius:14px;--display:'Exo 2',Arial,sans-serif}body{font-family:Raleway,Arial,sans-serif;color:#13292c;max-width:1000px;margin:24px auto;padding:0 20px}h1{font-family:var(--display);color:#047a77}`+
+    [...document.querySelector("style").sheet.cssRules].map(r=>r.cssText).filter(t=>/^\.(house|roof|beam|pillar|pillars|found|empty)/.test(t)).join("\n");
+  return `<!DOCTYPE html><html lang="uk"><head><meta charset="utf-8"><title>Стратегія на 1 сторінку</title><link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700&family=Raleway:wght@400;600&display=swap" rel="stylesheet"><style>${css}</style></head><body><h1>${esc(D().org||"Стратегія")}</h1>${h}</body></html>`;
+}
+const fname=ext=>`strategiia-${(D().org||"organizatsii").replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-|-$/g,"").toLowerCase()}.${ext}`;
+async function save(filename,data){
+  if(!downloads){toast("Завантаження недоступне в цьому вікні");return}
+  try{await downloads.save({filename,data});toast("Файл збережено")}catch(e){toast(e&&e.code==="declined"?"Завантаження скасовано":"Не вдалося зберегти файл")}
+}
+
+/* ============ AI ============ */
+function sectionText(sec){
+  const d=D();const parts=[];
+  leafFields(sec).forEach(f=>{const v=d[f.k];
+    if(f.type==="list"){(v||[]).forEach((it,j)=>{parts.push(`${f.label} #${j+1}: `+f.cols.map(c=>`${c.label}: ${it[c.k]||"—"}`).join("; "))})}
+    else parts.push(`${f.label}: ${String(v||"").trim()||"(не заповнено)"}`)});
+  return parts.join("\n");
+}
+function mdLite(t){const L=esc(t).split("\n");let html="",inUl=false;
+  L.forEach(l=>{const b=l.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+    if(/^\s*[-*•]\s+/.test(l)){if(!inUl){html+="<ul>";inUl=true}html+=`<li>${b.replace(/^\s*[-*•]\s+/,"")}</li>`}
+    else{if(inUl){html+="</ul>";inUl=false}if(/^#+\s/.test(l))html+=`<p><b>${b.replace(/^#+\s/,"")}</b></p>`;else if(l.trim())html+=`<p>${b}</p>`}});
+  if(inUl)html+="</ul>";return html}
+let aiCtl=null;
+async function askAI(i,btn){
+  if(!sample)return; const sec=SECTIONS[i]; const out=$("#aiout");
+  const ctx=`Організація: ${D().org||"не вказано"} (${D().orgtype||"тип не вказано"}), період ${D().period||"не вказано"}.\nМісія: ${D().mission||"—"}`;
+  const prompt=`Ти досвідчена консультантка з організаційного розвитку і стратегічного планування для громадських організацій, фондів і комунальних установ в Україні. Пиши українською, коротко й конкретно, без води.
+
+Контекст організації:
+${ctx}
+
+Розділ стратегії: «${sec.title}» (${sec.lead})
+Заповнене користувачем:
+${sectionText(sec)}
+
+Дай зворотний зв'язок у такій структурі:
+**Що вже сильно** — 1–2 пункти.
+**Що розмито або суперечливо** — 2–4 пункти, з цитатою проблемного місця.
+**Як переформулювати** — 1–2 приклади покращених формулювань саме для цієї організації.
+**Питання для команди** — 2–3 питання, щоб пропрацювати розділ глибше.
+Якщо розділ майже порожній, замість оцінки запропонуй, з чого почати, і дай 2 приклади формулювань. Не більше 220 слів.`;
+  if(aiCtl)aiCtl.abort(); aiCtl=new AbortController();
+  btn.disabled=true; out.innerHTML="<p>Читаю розділ…</p>";
+  try{const r=await sample(prompt,{signal:aiCtl.signal,cache:false,onText:({text})=>{out.innerHTML=mdLite(text)}});out.innerHTML=mdLite(r.text)}
+  catch(e){if(e&&e.name==="AbortError")return;
+    if(e&&e.code==="not_granted"){out.innerHTML="<p>Доступ до ШІ не надано в цьому вікні.</p>"}
+    else if(e&&e.code==="rate_limited"){out.innerHTML="<p>Забагато запитів. Спробуйте за хвилину.</p>"}
+    else out.innerHTML="<p>Не вдалося отримати відповідь. Спробуйте ще раз.</p>"}
+  finally{btn.disabled=false}
+}
+
+/* ============ DEMO ============ */
+const DEMO={org:"ГО «Сусідство» (демо)",orgtype:"Громадська організація",period:"2026–2029",owner:"Олена Коваль, виконавча директорка",approved:"Правління, грудень 2026",version:"v0.9 — демо-приклад",
+ why:"Завершилася стратегія 2022–2025, а донори переходять від гуманітарних програм до відновлення громад.",
+ p_soc:"Багато ВПО в районах; зростає запит на спільноти підтримки.",p_eco:"Скорочення гуманітарного фінансування; нові програми ЄС для громад.",
+ s:"Довіра мешканців у 6 районах; команда фасилітаторів.",w:"80% бюджету від одного донора; немає системи моніторингу.",o:"Програми відновлення громад; інтерес міськради до участі мешканців.",t:"Відтік кадрів; втома волонтерів.",
+ conclusions:"1. Довіра мешканців дає шанс стати оператором програм участі для міста.\n2. Без диверсифікації фінансування організація вразлива.",
+ mission:"Ми допомагаємо мешканцям об'єднуватися в спільноти й разом змінювати свої квартали.",
+ vision:"У 2029 році в кожному районі міста діє активна спільнота сусідів, з якою місто планує зміни.",
+ values:[{name:"Відкритість",do:"Публікуємо звіти щокварталу",dont:"Не ухвалюємо рішень без пояснення команді"},{name:"Співтворення",do:"Мешканці беруть участь у плануванні кожного проєкту",dont:"Не приходимо з готовими рішеннями"},{name:"Турбота",do:"Плануємо навантаження з урахуванням відпочинку",dont:"Не працюємо на вигорання"}],
+ problem:"Мешканці не впливають на рішення щодо простору, де живуть.",change:"Місто розвивається разом із мешканцями.",
+ dirs:[{name:"Сильні спільноти",goal:"10 активних ініціативних груп до 2029 року",obj:"Навчити 150 лідерів спільнот\nЗапустити фонд мікрогрантів",kpi:"Активні групи — 3 — 10 — 2029",own:"Керівниця програм",res:""},
+  {name:"Місто, що слухає",goal:"Міськрада ухвалила регламент участі мешканців",obj:"Робоча група з міськрадою\n3 пілотні консультації",kpi:"Пілотні консультації — 0 — 3 — 2027",own:"Олена Коваль",res:""},
+  {name:"Стійка організація",goal:"Жодне джерело не перевищує 40% бюджету",obj:"Платні послуги фасилітації для громад\nКлуб друзів організації",kpi:"Частка найбільшого донора — 80% — 40% — 2029",own:"Фінансова директорка",res:""}],
+ stop:"Не проводимо разові заходи без продовження.",
+ gaps:"1. Немає моніторингу результатів. 2. Перевантаження команди.",
+ risks:[{r:"Скорочення фінансування від ключового донора",p:"висока",i:"високий",m:"Резервний фонд на 3 місяці; 2 нові заявки щокварталу",o:"Фінансова директорка"}],
+ rhythm:"Щомісяця: чек-ін 30 хв. Щокварталу: огляд «світлофором» з правлінням. Щороку: стратсесія."};
+
+/* ============ EVENTS ============ */
+function setPath(path,val){const p=path.split(".");if(p.length===1){D()[p[0]]=val;return}const [k,i,c]=p;const arr=D()[k]||(D()[k]=[]);arr[+i]=arr[+i]||{};arr[+i][c]=val}
+function autoGrow(t){t.style.height="auto";t.style.height=Math.min(t.scrollHeight+2,520)+"px"}
+function autoGrowAll(){document.querySelectorAll("#main textarea").forEach(autoGrow)}
+function go(i){secIdx=Math.max(0,Math.min(SECTIONS.length-1,i));try{history.replaceState(null,"","#"+SECTIONS[secIdx].id)}catch(e){location.hash=SECTIONS[secIdx].id}refreshNav();renderSection();window.scrollTo({top:0,behavior:"smooth"})}
+
+document.addEventListener("input",e=>{const t=e.target;
+  if(t.dataset.path){setPath(t.dataset.path,t.value);if(t.tagName==="TEXTAREA")autoGrow(t);touch()}});
+document.addEventListener("change",e=>{const t=e.target;
+  if(t.dataset.check){const c=D()._checks||(D()._checks={});c[t.dataset.check]=t.checked;touch()}
+  else if(t.tagName==="SELECT"&&t.dataset.path){setPath(t.dataset.path,t.value);touch()}});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.go!==undefined){go(+b.dataset.go);return}
+  if(b.dataset.add){const sec=SECTIONS[secIdx];const f=leafFields(sec).find(x=>x.k===b.dataset.add);const it={};f.cols.forEach(c=>it[c.k]="");(D()[f.k]=D()[f.k]||[]).push(it);touch();renderSection();
+    const items=document.querySelectorAll("#main .item");const last=items[items.length-1];if(last){const inp=last.querySelector("input,textarea");if(inp)inp.focus()}return}
+  if(b.dataset.del){if(await ask("Прибрати запис?","Цей запис буде видалено з розділу.")){D()[b.dataset.del].splice(+b.dataset.i,1);touch();renderSection()}return}
+  if(b.dataset.ai!==undefined){askAI(+b.dataset.ai,b);return}
+  if(b.dataset.exp){const x=b.dataset.exp;
+    if(x==="copy"){try{await navigator.clipboard.writeText(mdBuild());toast("Markdown скопійовано")}catch(err){toast("Браузер не дозволив копіювання")}}
+    if(x==="md")save(fname("md"),mdBuild());
+    if(x==="html")save(fname("html"),htmlBuild());
+    if(x==="one")save(fname("html").replace(".html","-1-storinka.html"),oneBuild());
+    if(x==="json")save(fname("json"),JSON.stringify({kind:"learnlab-strategy",v:1,data:D()},null,2));
+    if(x==="import")$("#fileIn").click();
+    return}
+});
+$("#btnNew").addEventListener("click",()=>{newStrategy({});lsSave();secIdx=0;renderAll();toast("Створено нову стратегію")});
+$("#btnDel").addEventListener("click",async()=>{if(!(await ask("Видалити цю стратегію?",`«${titleOf(cur())}» буде видалено без можливості відновлення. Спершу можна зробити резервну копію .json.`)))return;
+  const id=curId;delete store[id];removeRemote(id);if(!Object.keys(store).length)newStrategy({});else curId=Object.keys(store)[0];lsSave();secIdx=0;renderAll();toast("Видалено")});
+$("#stratSel").addEventListener("change",e=>{const v=e.target.value;
+  if(v==="__demo"){newStrategy(JSON.parse(JSON.stringify(DEMO)));touch();secIdx=SECTIONS.length-1;renderAll();toast("Відкрито демо-приклад. Його можна редагувати або видалити");return}
+  if(v==="__import"){renderPicker();$("#fileIn").click();return}
+  curId=v;lsSave();renderAll()});
+$("#fileIn").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{const j=JSON.parse(await f.text());const data=j&&j.data&&typeof j.data==="object"?j.data:j;if(typeof data!=="object"||Array.isArray(data))throw 0;newStrategy(data);touch();secIdx=0;renderAll();toast("Імпортовано: "+titleOf(cur()))}
+  catch(err){toast("Це не схоже на файл стратегії .json")}});
+window.addEventListener("hashchange",()=>{const i=SECTIONS.findIndex(s=>"#"+s.id===location.hash);if(i>=0&&i!==secIdx){secIdx=i;refreshNav();renderSection()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").classList.contains("on"))$("#modalNo").click()});
+
+/* bird */
+let birdN=0;$("#bird").addEventListener("click",()=>{birdN++;const msgs=["Стратегія — це рішення, чого НЕ робити. — М. Портер","Пташка нагадує: зробіть перерву на 5 хвилин","Найкраща стратегія та, яку команда пам'ятає без документа"];toast("🐦 "+msgs[(birdN-1)%msgs.length])});
+
+/* ============ BOOT ============ */
+(function boot(){
+  const saved=lsLoad(); store=saved.store||{}; curId=saved.curId;
+  if(!Object.keys(store).length)newStrategy({});
+  if(!store[curId])curId=Object.keys(store)[0];
+  const i=SECTIONS.findIndex(s=>"#"+s.id===location.hash);if(i>=0)secIdx=i;
+  setStatus("local","Зберігається в цьому браузері");
+  renderAll();
+  initCloud();
+})();
+</script>
+</body>
+</html>
